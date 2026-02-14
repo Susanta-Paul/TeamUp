@@ -27,22 +27,62 @@ export const registerController= async function(req, res){
         const user= await createUserService({username, email, hashedPasword})
 
         // create token
-        const token=await user.generateToken()
+        const token= user.generateToken()
+
+        const userObj = user.toObject();
+        delete userObj.password
 
         //set token to cookies
         res.cookie('token', token, {httpOnly: true})
 
-        res.status(201).json({user, token, message: "user Created Successfully"})
+        res.status(201).json({userObj, token, message: "user Created Successfully"})
     } catch (error) {
         return res.status(500).json({message: "Something went Wrong!"})
     }
 }
 
-export const loginController= async (req, res)=>{
+export const loginController= async function(req, res){
     const validationErrors= validationResult(req)
     if(!validationErrors.isEmpty()){
         return res.status(400).json({
             message: validationErrors.array()
         })
+    }
+
+    const {username, password}=req.body
+
+    // explicitely selecting the password
+    const user= await userModel.findOne({username}).select("+password")
+    if(!user){
+        return res.status(400).json({message: "username and/or password is Wrong"})
+    }
+
+    const isMatch=await user.comparePassword(password)
+    
+    if(!isMatch){
+        return res.status(400).json({message: "username and/or password is Wrong"})
+    }
+
+    // generate token 
+    const token=userModel.generateToken()
+
+    // delete the password from user object.
+    const userObj = user.toObject();
+    delete userObj.password;
+
+    res.cookie("token", token,{httpOnly: true})
+    .status(200)
+    .json({userObj, token, message:"User Login Successfully"})
+
+}
+
+export const logOutController=async function(req, res){
+    try {
+        await userModel.findOneAndUpdate({username: req.user.username},{token: null})
+        // remove the token from cookies
+        res.clearCookie("token",{httpOnly: true})
+        .status(200).json({message: "User logged Out Successfully"})
+    } catch (error) {
+        return res.status(500).json({message: "Something went wrong!"})
     }
 }
