@@ -25,6 +25,7 @@ const userSchema= new Schema({
     },
     token: {
         type: String,
+        select: false,
         default: null
     },
     fullname: {
