@@ -7,7 +7,8 @@ const chatSchema=new Schema({
         required: true
     },
     lastMessage: {
-        type: String,
+        type: Schema.Types.ObjectId,
+        ref: "message"
     },
     lastMessageAt: {
         type: Date,
